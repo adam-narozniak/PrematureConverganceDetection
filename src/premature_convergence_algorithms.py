@@ -1,5 +1,6 @@
 """This is our project assignment."""
 import logging
+
 import numpy as np
 
 
@@ -11,16 +12,9 @@ def naive_stop(population, scores, bests):
         population:
         scores:
     """
-    if len(bests) > 50 and bests[-25]/bests[-1] < 1.05:
+
+
+    if len(bests) > 50 and bests[-25] / bests[-1] < 1.05:
         logging.info("algorithm stuck in local optimum")
         return True
     return False
-
-
-def statistic_stop(population, score):
-    var = np.std(population, axis=0)
-    print(var)
-
-
-if __name__ == '__main__':
-    statistic_stop([[0, 0], [14, 14]], 1)

@@ -4,14 +4,21 @@ import reproductions
 import successions
 import logging
 import matplotlib.pyplot as plt
+import pandas as pd
+import sys
 import premature_convergence_algorithms
 import crossovers
 import mutations
 
-def evolutionary_algorithm(population, iterations, mutation_probability, crossover_probability, cost_function,
-                           mutation_strength):
+
+logger = logging.getLogger("PrematureConvergenceDetection")
+
+
+def genetic_algorithm(population, iterations, mutation_probability, crossover_probability, cost_function,
+                      mutation_strength):
+
     """Genetic algorithm based on holland algorithm."""
-    logging.info("Generic algorithm started")
+    logger.info("Generic algorithm started")
     if population.ndim != 2:
         raise Exception(f"Wrong format of population")
 
@@ -24,12 +31,14 @@ def evolutionary_algorithm(population, iterations, mutation_probability, crossov
         raise Exception(f"Number of features should be positive number, not {population_size}")
 
     scores = evaluate(population, cost_function)
-    best_individual = find_best_score(scores)
+    best_individual_value, best_individual_idx = find_best_score(scores)
+    best_individual_features = population[best_individual_idx]
     bests = []
-    bests.append(best_individual)
-    for iteration in range(1, iterations+1):
-     #   if premature_convergence_algorithms.naive_stop(population, scores, bests):
-      #      break
+
+    bests.append(best_individual_value)
+    for iteration in range(1, iterations + 1):
+        # if premature_convergence_algorithms.naive_stop(population, scores, bests):
+        #     break
 
         children = reproductions.roulette_wheel(population, scores)
 
@@ -39,13 +48,17 @@ def evolutionary_algorithm(population, iterations, mutation_probability, crossov
                                                        mutation_strength)
 
         scores_mutants = evaluate(mutants_and_crossovered, cost_function)
-        best_individual_in_iteration = find_best_score(scores_mutants)
-
-        best_individual = best_individual if best_individual < best_individual_in_iteration \
-            else best_individual_in_iteration
-        population, scores = successions.generative(population, mutants_and_crossovered, scores, scores_mutants)
-        logging.info(f"Iteration {iteration:3d}/{iterations} completed, best individual score: {best_individual:.02e}")
-        bests.append(best_individual)
+        iteration_best_value, best_individual_in_iteration_idx = find_best_score(scores_mutants)
+        feature_best_iteration = mutants_and_crossovered[best_individual_in_iteration_idx]
+        logger.info(
+            f"{'Best in iteration.':20} features: {feature_best_iteration}; score: {iteration_best_value:5.2f}")
+        if best_individual_value > iteration_best_value:
+            best_individual_value = iteration_best_value
+            best_individual_features = feature_best_iteration
+        population, scores = successions.elite(population, mutants_and_crossovered, scores, scores_mutants, 0.1)
+        logger.info(f"{'Best overall.':20} features: {best_individual_features}; score: {best_individual_value:5.2f}")
+        logger.info(f"Iteration {iteration:3d}/{iterations} completed.")
+        bests.append(best_individual_value)
     return bests
 
 
@@ -61,14 +74,18 @@ def evaluate(population, cost_function):
 
 
 def find_best_score(scores):
-    return scores.min(axis=0)
+    scores_pd = pd.Series(scores)
+    my_min = scores_pd.min(axis=0)
 
 
 def mutate_and_crossover(population, mutation_probability, crossover_probability, mutation_strength, feature_crossover_probability=0.5):
+
     rng = np.random.default_rng()
     #population = mutations.mutate(population, mutation_probability, mutation_strength, rng)
     # crossover (pl.krzyżowanie równomierne)
+
     population = crossovers.crossover(population, crossover_probability, rng, feature_crossover_probability)
+
 
     return population
 
@@ -88,21 +105,31 @@ def initialize_population(n_features, population_size):
 
 def prepare_logging():
     """In order to generate information how algorithm performs."""
-    logging.basicConfig(level=logging.INFO)
+    logger = logging.getLogger("PrematureConvergenceDetection")
+    logger.setLevel(logging.INFO)
+    ch = logging.StreamHandler(sys.stdout)
+    ch.setLevel(logging.INFO)
+    formatter = logging.Formatter('%(levelname)s:%(name)s: %(message)s')
+    ch.setFormatter(formatter)
+    logger.addHandler(ch)
+
 
 
 if __name__ == '__main__':
     prepare_logging()
     n_features = 2
     population_size = 10000
-    iterations = 500
-    mutation_probability = 0.2
+
+    iterations = 5000
+    mutation_probability = 0.3
+    crossover_probability = 0.6
     crossover_probability = 0.8
-    mutation_strength = 1
+    mutation_strength = 10
 
     population = initialize_population(n_features, population_size)
-    bests = evolutionary_algorithm(population, iterations, mutation_probability, crossover_probability, simple.f1,
-                                   mutation_strength)
+    bests = genetic_algorithm(population, iterations, mutation_probability, crossover_probability, simple.f1,
+                              mutation_strength)
 
-    plt.plot(list(range(1, len(bests)+1)), bests)
+
+    plt.plot(list(range(1, len(bests) + 1)), bests)
     plt.savefig("./plot1.jpg")

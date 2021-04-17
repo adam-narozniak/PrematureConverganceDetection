@@ -10,13 +10,11 @@ import premature_convergence_algorithms
 import crossovers
 import mutations
 
-
 logger = logging.getLogger("PrematureConvergenceDetection")
 
 
 def genetic_algorithm(population, iterations, mutation_probability, crossover_probability, cost_function,
                       mutation_strength):
-
     """Genetic algorithm based on holland algorithm."""
     logger.info("Generic algorithm started")
     if population.ndim != 2:
@@ -76,16 +74,15 @@ def evaluate(population, cost_function):
 def find_best_score(scores):
     scores_pd = pd.Series(scores)
     my_min = scores_pd.min(axis=0)
+    return my_min, scores_pd.idxmin(axis=0)
 
 
-def mutate_and_crossover(population, mutation_probability, crossover_probability, mutation_strength, feature_crossover_probability=0.5):
-
+def mutate_and_crossover(population, mutation_probability, crossover_probability, mutation_strength,
+                         feature_crossover_probability=0.5):
     rng = np.random.default_rng()
-    #population = mutations.mutate(population, mutation_probability, mutation_strength, rng)
+    population = mutations.mutate(population, mutation_probability, mutation_strength, rng)
     # crossover (pl.krzyżowanie równomierne)
-
-    population = crossovers.crossover(population, crossover_probability, rng, feature_crossover_probability)
-
+    #population = crossovers.crossover(population, crossover_probability, rng, feature_crossover_probability)
 
     return population
 
@@ -114,7 +111,6 @@ def prepare_logging():
     logger.addHandler(ch)
 
 
-
 if __name__ == '__main__':
     prepare_logging()
     n_features = 2
@@ -123,13 +119,11 @@ if __name__ == '__main__':
     iterations = 5000
     mutation_probability = 0.3
     crossover_probability = 0.6
-    crossover_probability = 0.8
     mutation_strength = 10
 
     population = initialize_population(n_features, population_size)
     bests = genetic_algorithm(population, iterations, mutation_probability, crossover_probability, simple.f1,
                               mutation_strength)
-
 
     plt.plot(list(range(1, len(bests) + 1)), bests)
     plt.savefig("./plot1.jpg")

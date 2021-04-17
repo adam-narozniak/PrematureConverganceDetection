@@ -10,6 +10,8 @@ def roulette_wheel(population, scores):
         For minimization problem.
 
     """
+
+
     scores_scaled = (scores - scores.min()) / (scores.max() - scores.min() + np.finfo(np.float32).eps)
     scores_minimization = 1 - scores_scaled
     probabilities = scores_minimization / scores_minimization.sum()

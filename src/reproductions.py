@@ -10,7 +10,7 @@ def roulette_wheel(population, scores):
         For minimization problem.
 
     """
-    scores_scaled = (scores - scores.min()) / (scores.max() - scores.min())
+    scores_scaled = (scores - scores.min()) / (scores.max() - scores.min() + 0.001)
     scores_minimization = 1 - scores_scaled
     probabilities = scores_minimization / scores_minimization.sum()
     # create random generator (new numpy code should follow this way of using random module)

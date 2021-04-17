@@ -1,89 +1,118 @@
-from src.cec17_test_func.cec17_functions import cec17_test_func
+import numpy as np
+from cec2017 import simple
+import reproductions
+import successions
+import logging
 
 
-class Population:
-    def __init__(self, size_of_population, number_of_features):
-        size = size_of_population
-        n_feature = number_of_features
-
-
-# co dalej?
-
-# minimization
-def holland(population, iterations, mutation_probability, crossover_probability):
-    if population.ndims != 2:
+def genetic_algorithm(population, iterations, mutation_probability, crossover_probability, cost_function,
+                      mutation_strength):
+    """Genetic algorithm based on holland algorithm."""
+    logging.info("Generic algorithm started")
+    if population.ndim != 2:
         raise Exception(f"Wrong format of population")
 
-    population_length = population.shape[0]
+    population_size = population.shape[0]
     n_features = population.shape[1]
 
-    if population_length < 1:
-        raise Exception(f"Population should be positive number, not {population_length}")
+    if population_size < 1:
+        raise Exception(f"Population should be positive number, not {population_size}")
     if n_features < 1:
-        raise Exception(f"Number of features should be positive number, not {population_length}")
+        raise Exception(f"Number of features should be positive number, not {population_size}")
 
     scores = evaluate(population, cost_function)
-    best = find_best(scores)
+    best_individual = find_best_score(scores)
 
     for iteration in range(iterations):
         if stop_criterion_satisfied(population, scores):
             break
-        # during lectures third parameter was passed - length, no use of that
-        children = reproduce(population, scores)
+
+        children = reproductions.roulette_wheel(population, scores)
 
         # don't get why it's grouped together, seems like they are separate operations
         # crossover not always during evolutionary algs
-        mutants_and_crossovered = mutate_and_crossover(children, mutation_probability, crossover_probability)
+        mutants_and_crossovered = mutate_and_crossover(children, mutation_probability, crossover_probability,
+                                                       mutation_strength)
 
         scores_mutants = evaluate(mutants_and_crossovered, cost_function)
-        iteration_best = find_best(mutants_and_crossovered, scores)
+        best_individual_in_iteration = find_best_score(scores_mutants)
 
-        best = best if best < iteration_best else iteration_best
-        population, scores = succession(population, mutants_and_crossovered, scores, scores_mutants)
-
-    # and what it returns???
-
-
-def evaluate(population, cec2017_func_number):
-    scores = []
-    dimension = population.shape[1]
-    mx = 1  # number of function to calculate
-    for individual in population:
-        placeholder_for_score = [0]
-        cec17_test_func(individual, placeholder_for_score, dimension,
-                        mx, cec2017_func_number)
-        scores.append(placeholder_for_score[0])
-    return scores
+        best_individual = best_individual if best_individual < best_individual_in_iteration \
+            else best_individual_in_iteration
+        population, scores = successions.generative(population, mutants_and_crossovered, scores, scores_mutants)
+        logging.info(f"Iteration {iteration}/{iterations} completed, best individual score: {best_individual:.02e}")
 
 
-def find_best(scores):
-    index_of_best_individual = 0
-    for i in range(scores):
-        if scores[i] < scores[index_of_best_individual]:
-            index_of_best_individual = i
-    return index_of_best_individual
+def evaluate(population, cost_function):
+    """Evaluate each individual in population based on give cost function.
+    Args:
+        cost_function: pointer to cec2017 function
+        """
+    evaluation_scores = np.zeros([population.shape[0], ])
+    for row_idx in range(population.shape[0]):
+        evaluation_scores[row_idx] = cost_function(population[row_idx])
+    return evaluation_scores
 
 
-def reproduce(population, scores):
-    pass
-
-
-def succession(population, mutants, scores, scores_mutants):
-    pass
-
-
-def cost_function():
-    pass
+def find_best_score(scores):
+    return scores.min(axis=0)
 
 
 def stop_criterion_satisfied(population, scores):
-    pass
+    """
+    This is out project assignment.
+
+    Args:
+        population:
+        scores:
+    """
+    return False
 
 
-def mutate_and_crossover(children, mutation_probability, crossover_probability):
-    pass
+def mutate_and_crossover(population, mutation_probability, crossover_probability, mutation_strength, feature_crossover_probability=0.5):
+    population_size = population.shape[0]
+    n_features = population.shape[1]
+    rng = np.random.default_rng()
+    # mutate
+    mutation_uniform = rng.uniform(0, 1, population_size)
+    normal_noise_for_mutation = rng.standard_normal(population_size *
+                                                    n_features).reshape(population_size, n_features) * mutation_strength
+    population[mutation_probability > mutation_uniform] += normal_noise_for_mutation[
+        mutation_probability > mutation_uniform]
+    # crossover (pl.krzyżowanie równomierne)
+    crossover_uniform = rng.uniform(0, 1, population_size)
+
+
+    return population
+
+
+def initialize_population(n_features, population_size):
+    """ Initialize population, meet cec2017 criteria which are: uniform distribution within search range
+    [-100, 100]^n_features.(pl. posiew równomierny)
+
+    Args:
+        n_features: number of dimensions
+        population_size: size of population
+    """
+    rng = np.random.default_rng()
+    population = rng.uniform(-100, 100, n_features * population_size).reshape(population_size, n_features)
+    return population
+
+
+def prepare_logging():
+    """In order to generate information how algorithm performs."""
+    logging.basicConfig(level=logging.INFO)
 
 
 if __name__ == '__main__':
-    print("Hello word")
-    evaluate(0, 0)
+    prepare_logging()
+    n_features = 10
+    population_size = 100
+    iterations = 500
+    mutation_probability = 0.1
+    crossover_probability = 0.6
+    mutation_strength = 1
+
+    population = initialize_population(n_features, population_size)
+    genetic_algorithm(population, iterations, mutation_probability, crossover_probability, simple.f1,
+                      mutation_strength)

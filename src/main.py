@@ -3,7 +3,8 @@ from cec2017 import simple
 import reproductions
 import successions
 import logging
-
+import matplotlib.pyplot as plt
+import premature_convergence_algorithms
 
 def genetic_algorithm(population, iterations, mutation_probability, crossover_probability, cost_function,
                       mutation_strength):
@@ -22,9 +23,10 @@ def genetic_algorithm(population, iterations, mutation_probability, crossover_pr
 
     scores = evaluate(population, cost_function)
     best_individual = find_best_score(scores)
-
-    for iteration in range(iterations):
-        if stop_criterion_satisfied(population, scores):
+    bests = []
+    bests.append(best_individual)
+    for iteration in range(1,iterations+1):
+        if premature_convergence_algorithms.naive_stop(population, scores, bests):
             break
 
         children = reproductions.roulette_wheel(population, scores)
@@ -40,7 +42,9 @@ def genetic_algorithm(population, iterations, mutation_probability, crossover_pr
         best_individual = best_individual if best_individual < best_individual_in_iteration \
             else best_individual_in_iteration
         population, scores = successions.generative(population, mutants_and_crossovered, scores, scores_mutants)
-        logging.info(f"Iteration {iteration}/{iterations} completed, best individual score: {best_individual:.02e}")
+        logging.info(f"Iteration {iteration:3d}/{iterations} completed, best individual score: {best_individual:.02e}")
+        bests.append(best_individual)
+    return bests
 
 
 def evaluate(population, cost_function):
@@ -58,15 +62,7 @@ def find_best_score(scores):
     return scores.min(axis=0)
 
 
-def stop_criterion_satisfied(population, scores):
-    """
-    This is out project assignment.
 
-    Args:
-        population:
-        scores:
-    """
-    return False
 
 
 def mutate_and_crossover(population, mutation_probability, crossover_probability, mutation_strength, feature_crossover_probability=0.5):
@@ -98,11 +94,9 @@ def initialize_population(n_features, population_size):
     population = rng.uniform(-100, 100, n_features * population_size).reshape(population_size, n_features)
     return population
 
-
 def prepare_logging():
     """In order to generate information how algorithm performs."""
     logging.basicConfig(level=logging.INFO)
-
 
 if __name__ == '__main__':
     prepare_logging()
@@ -114,5 +108,8 @@ if __name__ == '__main__':
     mutation_strength = 1
 
     population = initialize_population(n_features, population_size)
-    genetic_algorithm(population, iterations, mutation_probability, crossover_probability, simple.f1,
+    bests = genetic_algorithm(population, iterations, mutation_probability, crossover_probability, simple.f1,
                       mutation_strength)
+
+    plt.plot(list(range(1, len(bests)+1)), bests)
+    plt.savefig("./plot1.jpg")

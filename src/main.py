@@ -13,6 +13,7 @@ import mutations
 from data_collector import DataCollector
 import pathlib
 import plotter
+from cec2017 import functions
 
 logger = logging.getLogger("PrematureConvergenceDetection")
 
@@ -160,26 +161,23 @@ def plot_results(bests, std_x0, mean_x0):
     plt.savefig("./plot_mean_x0.jpg")
 
 
-def check_on_one_fnc(cost_function):
+def check_on_one_fnc(cost_function, name):
+    logger.info(f"start: {name}")
     n_features = 10
     population_size = 1000
-    n_iterations = 500
+    n_iterations = 200
     mutation_probability = 0.2
     crossover_probability = 0.6
     mutation_strength = 10
     population = initialize_population(n_features, population_size)
-    # bests, std_x0, mean_x0 = evolutionary_algorithm(population, n_iterations, mutation_probability,
-    #                                                 crossover_probability, simple.f10,
-    #                                                 mutation_strength)
-    # plot_results(bests, std_x0, mean_x0)
     data_collector = evolutionary_algorithm(population, n_iterations, mutation_probability,
                                             crossover_probability, cost_function,
                                             mutation_strength)
-    results = data_collector.save_data(pathlib.Path.cwd()/"my_first_data.csv")
-    plotter.plot_std_on_best_x(results)
-    plotter.plot_mean_on_best_x(results)
-    plotter.plot_best_individual_value_vs_std_x(results)
-    plotter.plot_best_individual_value_vs_mean_x(results)
+    results = data_collector.save_data(pathlib.Path.cwd()/"data"/"all_fnc"/f"{name}.csv")
+    plotter.plot_std_on_best_x(results, name)
+    plotter.plot_mean_on_best_x(results, name)
+    plotter.plot_best_individual_value_vs_std_x(results, name)
+    plotter.plot_best_individual_value_vs_mean_x(results, name)
 
 def prepare_gid_search():
     """Return search params"""
@@ -208,4 +206,8 @@ if __name__ == '__main__':
     prepare_logging()
     # search_params = prepare_gid_search()
     # run_grid_search(search_params)
-    check_on_one_fnc(hybrid.f11)
+    fnc_names = ['f1', 'f3', 'f4', 'f5', 'f6', 'f7', 'f8', 'f9', 'f10', 'f11', 'f12', 'f13', 'f14', 'f15', 'f16',
+                 'f17', 'f18', 'f19', 'f20', 'f21', 'f22', 'f23', 'f24', 'f25', 'f26', 'f27', 'f28', 'f29', 'f30']
+    for fnc_name, fnc in zip(fnc_names, functions.all_functions):
+        check_on_one_fnc(fnc, fnc_name)
+

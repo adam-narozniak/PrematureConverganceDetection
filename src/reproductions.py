@@ -11,7 +11,6 @@ def roulette_wheel(population, scores):
 
     """
 
-
     scores_scaled = (scores - scores.min()) / (scores.max() - scores.min() + np.finfo(np.float32).eps)
     scores_minimization = 1 - scores_scaled
     probabilities = scores_minimization / scores_minimization.sum()
@@ -29,7 +28,7 @@ def rank_selection(population, scores):
     n_features = population.shape[1]
     scores_scaled = (scores - scores.min()) / (scores.max() - scores.min() + np.finfo(np.float32).eps)
     scores_minimization = 1 - scores_scaled
-    #scores_minimization = np.sort(scores_minimization)[::-1]
+    # scores_minimization = np.sort(scores_minimization)[::-1]
     population_and_scores = pd.DataFrame(population)
     scores_series = pd.Series(scores_minimization, name="scores")
     population_and_scores = pd.concat([population_and_scores, scores_series], axis=1)
@@ -38,5 +37,5 @@ def rank_selection(population, scores):
     probabilities = fitness / fitness.sum()
     rng = np.random.default_rng()
     selected_idx = rng.choice(population_size, population_size, p=probabilities, axis=0)
-    selected = population_and_scores.loc[selected_idx, 0:(n_features-1)].values
+    selected = population_and_scores.loc[selected_idx, 0:(n_features - 1)].values
     return selected

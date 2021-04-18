@@ -55,9 +55,14 @@ def evolutionary_algorithm(population, n_iterations, mutation_probability, cross
     best_individual_features = population[best_individual_idx]
     data_collector = DataCollector(n_features, n_iterations)
     data_collector.add_metrics(0, population, scores, best_individual_features, best_individual_value)
+    stopped_in_iteration = -1
+    stuck = False
     for iteration in range(1, n_iterations + 1):
-        # if premature_convergence_algorithms.naive_stop(population, scores, bests):
+        # if premature_convergence_algorithms.naive_stop(population, scores, data_collector.best_scores):
         #     break
+        if premature_convergence_algorithms.individual_outside_std(population, data_collector, 1, iteration-1) and not stuck:
+            stopped_in_iteration = iteration - 1
+            stuck = True
 
         children = reproduction_fnc(population, scores)
         # genetic operations
@@ -78,11 +83,11 @@ def evolutionary_algorithm(population, n_iterations, mutation_probability, cross
         else:  # succession.generative
             population, scores = succession_fnc(population, mutants_and_crossovered, scores, scores_mutants)
         data_collector.add_metrics(iteration, population, scores, best_individual_features, best_individual_value)
-        # logger.info(
-        #     f"{'Best overall.':20} score: {best_individual_value:5.02e}")  # features: {best_individual_features};
-        # logger.info(f"Iteration {iteration:3d}/{n_iterations} completed.")
+        logger.info(
+         f"{'Best overall.':20} score: {best_individual_value:5.02e}")  # features: {best_individual_features};
+        logger.info(f"Iteration {iteration:3d}/{n_iterations} completed.")
     logger.info("Generic algorithm stopped")
-    return data_collector
+    return data_collector, stopped_in_iteration
 
 
 def evaluate(population, cost_function):
@@ -99,8 +104,7 @@ def evaluate(population, cost_function):
 
 
 def find_best_score(scores):
-    """Find best score and corresponding index.
-    """
+    """Find best score and corresponding index."""
     scores_pd = pd.Series(scores)
     my_min = scores_pd.min(axis=0)
     return my_min, scores_pd.idxmin(axis=0)
@@ -170,14 +174,14 @@ def check_on_one_fnc(cost_function, name):
     crossover_probability = 0.6
     mutation_strength = 10
     population = initialize_population(n_features, population_size)
-    data_collector = evolutionary_algorithm(population, n_iterations, mutation_probability,
+    data_collector, stopped_in_iteration = evolutionary_algorithm(population, n_iterations, mutation_probability,
                                             crossover_probability, cost_function,
                                             mutation_strength)
     results = data_collector.save_data(pathlib.Path.cwd()/"data"/"all_fnc"/f"{name}.csv")
-    plotter.plot_std_on_best_x(results, name)
-    plotter.plot_mean_on_best_x(results, name)
-    plotter.plot_best_individual_value_vs_std_x(results, name)
-    plotter.plot_best_individual_value_vs_mean_x(results, name)
+    plotter.plot_std_on_best_x(results, name, stopped_in_iteration)
+    plotter.plot_mean_on_best_x(results, name, stopped_in_iteration)
+    plotter.plot_best_individual_value_vs_std_x(results, name, stopped_in_iteration)
+    plotter.plot_best_individual_value_vs_mean_x(results, name, stopped_in_iteration)
 
 def prepare_gid_search():
     """Return search params"""

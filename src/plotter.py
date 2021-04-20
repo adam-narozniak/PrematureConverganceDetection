@@ -78,8 +78,10 @@ class Plotter:
         plt.close(fig)
 
     def plot_cmp_bests_variants(self):
+        """Plot stops on scores of best instance for all different stopping strategies"""
         color_representation = self.make_color_representation()
         linestyle_represetation = self.make_linestyple_representation()
+        mins, maks = self.make_line_len_representation()
         fig, ax = plt.subplots()
         variants = self.stopped_in_iteration
         ax.set_xlabel("iterations")
@@ -90,8 +92,8 @@ class Plotter:
         for look_back_by in variants.index.values:
             for ratio in variants.columns.values:
                 if variants.loc[look_back_by, ratio] != 0:
-                    line = ax.axvline(variants.loc[look_back_by, ratio], ls="--", color=color_representation.loc[look_back_by, ratio],
-                                      label=f"stop, ratio: {ratio}, look_back: {look_back_by}")
+
+                    line = ax.axvline(x=variants.loc[look_back_by, ratio], ymin = mins.loc[look_back_by, ratio], ymax = maks.loc[look_back_by, ratio], ls="--", color=color_representation.loc[look_back_by, ratio], label=f"stop, ratio: {ratio}, look_back: {look_back_by}")
                     stop_lines.append(line)
         lines = line1 + stop_lines
         ax.legend(lines, [l.get_label() for l in lines])
@@ -110,3 +112,20 @@ class Plotter:
         return pd.DataFrame(np.array(["o", "<", ">", "^", "8", "s", "P", "*", "x"]).reshape(3, 3),
                             columns=count_as_stuck_if_ratio_is_less_than, index=look_back_by)
 
+    def make_line_len_representation(self):
+        look_back_by = [5, 10, 25]
+        count_as_stuck_if_ratio_is_less_than = [1.025, 1.05, 1.1]
+        part = 1/9
+        min = -part
+        max = 0
+        mins = []
+        maks = []
+        for stop in range(1,10):
+            min +=part
+            max +=part
+            mins.append(min)
+            maks.append(max)
+        mins = pd.DataFrame(np.array(mins).reshape(3, 3), columns=count_as_stuck_if_ratio_is_less_than, index=look_back_by)
+        maks = pd.DataFrame(np.array(maks).reshape(3, 3),  columns=count_as_stuck_if_ratio_is_less_than, index=look_back_by)
+        5+5
+        return mins, maks

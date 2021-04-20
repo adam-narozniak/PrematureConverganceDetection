@@ -177,11 +177,13 @@ def check_on_one_fnc(cost_function, name):
     data_collector, stopped_in_iteration = evolutionary_algorithm(population, n_iterations, mutation_probability,
                                             crossover_probability, cost_function,
                                             mutation_strength)
-    results = data_collector.save_data(pathlib.Path.cwd()/"data"/"all_fnc"/f"{name}.csv")
-    plotter.plot_std_on_best_x(results, name, stopped_in_iteration)
-    plotter.plot_mean_on_best_x(results, name, stopped_in_iteration)
-    plotter.plot_best_individual_value_vs_std_x(results, name, stopped_in_iteration)
-    plotter.plot_best_individual_value_vs_mean_x(results, name, stopped_in_iteration)
+    data_collector.save_data(pathlib.Path.cwd()/"data"/"all_fnc"/f"{name}.csv")
+    results = data_collector.results
+    my_plotter = plotter.Plotter(results, stopped_in_iteration, name)
+    my_plotter.plot_std_on_best_x()
+    my_plotter.plot_mean_on_best_x()
+    my_plotter.plot_best_individual_value_vs_std_x()
+    my_plotter.plot_best_individual_value_vs_mean_x()
 
 def prepare_gid_search():
     """Return search params"""

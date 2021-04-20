@@ -5,20 +5,6 @@ import numpy as np
 logger = logging.getLogger("PrematureConvergenceDetection")
 
 
-def naive_stop2(population, scores, bests, iteration):
-    """
-    Naive looking 25 iterations back
-
-    Args:
-        population:
-        scores:
-        iteration: number of previous iteration
-    """
-    if len(bests) > 50 and bests[-1] / bests[-25] < 1.05:
-        logger.info("algorithm stuck in local optimum")
-        return True
-    return False
-
 
 def naive_stop(data_collector, iteration):
     """
@@ -30,8 +16,7 @@ def naive_stop(data_collector, iteration):
         iteration: number of previous iteration
     """
     back_by = 25
-    if iteration > back_by and data_collector.best_scores[iteration - back_by] / data_collector.best_scores[
-        iteration] < 1.1:
+    if iteration > back_by and data_collector.best_scores[iteration - back_by] / data_collector.best_scores[iteration] < 1.1:
         logger.info("algorithm stuck in local optimum")
         return True
     return False

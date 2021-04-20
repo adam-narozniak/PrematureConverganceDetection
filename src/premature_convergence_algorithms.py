@@ -42,7 +42,7 @@ def naive_stop_cmp(data_collector, variants, iteration):
 
 def individual_outside_std(population, data_collector, factor, iteration):
     """
-    Classify as futile when there are no individuals outside factor * std. Answers question if we should stop algorithm.
+    Classify as futile when there are no individuals outside factor > std. Answers question if we should stop algorithm.
     Args:
         population:
         data_collector:
@@ -52,14 +52,8 @@ def individual_outside_std(population, data_collector, factor, iteration):
         True when stuck in optimum
         False when still exploring
     """
-    means = data_collector.means[iteration]
-    upper_bound = means + factor * data_collector.stds[iteration]
-    lower_bound = means - factor * data_collector.stds[iteration]
-    greater_than_upper = np.array(upper_bound < population.max(axis=0)).any()
-    smaller_than_lower = np.array(lower_bound > population.min(axis=0)).any()
-    # check if there are any individuals greater or smaller than factor * std
-    if greater_than_upper or smaller_than_lower:
-        return False  # there are still exploring individuals
-    else:
+    if data_collector.stds[iteration].all() < factor:
         logger.info("algorithm stuck in local optimum")
         return True
+    else:
+        return False

@@ -127,5 +127,4 @@ class Plotter:
             maks.append(max)
         mins = pd.DataFrame(np.array(mins).reshape(3, 3), columns=count_as_stuck_if_ratio_is_less_than, index=look_back_by)
         maks = pd.DataFrame(np.array(maks).reshape(3, 3),  columns=count_as_stuck_if_ratio_is_less_than, index=look_back_by)
-        5+5
         return mins, maks

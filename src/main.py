@@ -19,7 +19,7 @@ logger = logging.getLogger("PrematureConvergenceDetection")
 
 
 def evolutionary_algorithm(population, n_iterations, mutation_probability, crossover_probability, cost_function,
-                           mutation_strength, reproduction_fnc=reproductions.roulette_wheel,
+                           mutation_strength, reproduction_fnc=reproductions.rank_selection,
                            succession_fnc=successions.elite, n_elite=None):
     """
     Evolutionary algorithm based on holland algorithm.
@@ -58,16 +58,17 @@ def evolutionary_algorithm(population, n_iterations, mutation_probability, cross
     stopped_in_iteration = -1
     stuck = False
     for iteration in range(1, n_iterations + 1):
-        # if premature_convergence_algorithms.naive_stop(population, scores, data_collector.best_scores):
-        #     break
-        if premature_convergence_algorithms.individual_outside_std(population, data_collector, 1, iteration-1) and not stuck:
+        if not stuck and premature_convergence_algorithms.naive_stop(data_collector, iteration-1):
             stopped_in_iteration = iteration - 1
             stuck = True
+        # if not stuck and premature_convergence_algorithms.individual_outside_std(population, data_collector, 1, iteration-1):
+        #     stopped_in_iteration = iteration - 1
+        #     stuck = True
 
         children = reproduction_fnc(population, scores)
         # genetic operations
         mutants_and_crossovered = mutate_and_crossover(children, mutation_probability, crossover_probability,
-                                                       mutation_strength, crossover=True)
+                                                       mutation_strength, crossover=False)
         scores_mutants = evaluate(mutants_and_crossovered, cost_function)
         iteration_best_value, best_individual_in_iteration_idx = find_best_score(scores_mutants)
         feature_best_iteration = mutants_and_crossovered[best_individual_in_iteration_idx]
@@ -79,7 +80,7 @@ def evolutionary_algorithm(population, n_iterations, mutation_probability, cross
             best_individual_value = iteration_best_value
             best_individual_features = feature_best_iteration
         if succession_fnc == successions.elite:
-            population, scores = succession_fnc(population, mutants_and_crossovered, scores, scores_mutants, 0.05)
+            population, scores = succession_fnc(population, mutants_and_crossovered, scores, scores_mutants, 0.1)
         else:  # succession.generative
             population, scores = succession_fnc(population, mutants_and_crossovered, scores, scores_mutants)
         data_collector.add_metrics(iteration, population, scores, best_individual_features, best_individual_value)

@@ -23,12 +23,3 @@ def crossover(population, crossover_probability, rng):
             #     population[i][j] = population[population_size - i - 1][j]
             #     population[population_size - i - 1][j] = swapper
     return population
-
-# testy, potem do usuniecia
-if __name__ == '__main__':
-    rng = np.random.default_rng()
-    population = rng.uniform(-100, 100, 5 * 4).reshape(4, 5)
-    print(population)
-    print('')
-    population = crossover(population, 1, rng)
-    print(population)

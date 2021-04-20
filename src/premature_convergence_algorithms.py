@@ -5,7 +5,6 @@ import numpy as np
 logger = logging.getLogger("PrematureConvergenceDetection")
 
 
-
 def naive_stop(data_collector, iteration):
     """
     Naive looking 25 iterations back
@@ -16,7 +15,8 @@ def naive_stop(data_collector, iteration):
         iteration: number of previous iteration
     """
     back_by = 25
-    if iteration > back_by and data_collector.best_scores[iteration - back_by] / data_collector.best_scores[iteration] < 1.1:
+    if iteration > back_by and data_collector.best_scores[iteration - back_by] / data_collector.best_scores[
+        iteration] < 1.001:
         logger.info("algorithm stuck in local optimum")
         return True
     return False
@@ -34,7 +34,8 @@ def naive_stop_cmp(data_collector, variants, iteration):
         for look_back_by in variants.index.values:
             if variants.loc[look_back_by, ratio] != 0:
                 continue
-            if iteration > look_back_by and data_collector.best_scores[iteration - look_back_by] / data_collector.best_scores[iteration]  < ratio:
+            if iteration > look_back_by and data_collector.best_scores[iteration - look_back_by] / \
+                    data_collector.best_scores[iteration] < ratio:
                 variants.loc[look_back_by, ratio] = iteration
                 logger.info(f"alogrithm stuck based on criteria ratio: {ratio} and look_back_by{look_back_by}")
                 variants.loc[look_back_by, ratio] = iteration
@@ -52,7 +53,12 @@ def individual_outside_std(population, data_collector, factor, iteration):
         True when stuck in optimum
         False when still exploring
     """
-    if data_collector.stds[iteration].all() < factor:
+    are_all_std_less_than_param = True
+    stds = np.std(population, axis=0)
+    for row in stds:
+        if row > factor:
+            are_all_std_less_than_param = False
+    if are_all_std_less_than_param:
         logger.info("algorithm stuck in local optimum")
         return True
     else:

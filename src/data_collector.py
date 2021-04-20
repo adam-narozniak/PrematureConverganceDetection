@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import pathlib
 
 
 class DataCollector:
@@ -8,6 +9,7 @@ class DataCollector:
         self.means = np.empty([n_iterations+1, n_features])
         self.best_scores = np.empty([n_iterations+1, 1])
         self.best_features = np.empty([n_iterations+1, n_features])
+        self.results = None
 
     def add_metrics(self, iteration, population, population_scores, best_individual_features, best_individual_score):
         self.stds[iteration] = population.std(axis=0)
@@ -15,7 +17,11 @@ class DataCollector:
         self.best_scores[iteration] = best_individual_score
         self.best_features[iteration] = best_individual_features
 
+    def create_dirs(self, file_path):
+        pathlib.Path(file_path.parents[0]).mkdir(parents=True, exist_ok=True)
+
     def save_data(self, file_path):
+        self.create_dirs(file_path)
         results = pd.DataFrame(np.concatenate([self.stds, self.means, self.best_features, self.best_scores], axis=1),
                                columns=
                                ["std_x0", "std_x1", "std_x2", "std_x3", "std_x4", "std_x5", "std_x6", "std_x7", "std_x8",
@@ -26,4 +32,5 @@ class DataCollector:
                                 'best_value'])
         results.index.name = "idx"
         results.to_csv(file_path)
-        return results
+        self.results = results
+

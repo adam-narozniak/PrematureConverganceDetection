@@ -37,5 +37,5 @@ def rank_selection(population, scores):
     probabilities = fitness / fitness.sum()
     rng = np.random.default_rng()
     selected_idx = rng.choice(population_size, population_size, p=probabilities, axis=0)
-    selected = population_and_scores.loc[selected_idx, 0:(n_features - 1)].values
+    selected = population_and_scores.iloc[selected_idx, 0:n_features].values
     return selected

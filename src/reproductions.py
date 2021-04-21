@@ -23,12 +23,11 @@ def roulette_wheel(population, scores):
 
 
 def rank_selection(population, scores):
-    """Rank selection. (pl. reprodukcja rangowa)"""
+    """Rank selection. (pl. reprodukcja rangowa)."""
     population_size = population.shape[0]
     n_features = population.shape[1]
     scores_scaled = (scores - scores.min()) / (scores.max() - scores.min() + np.finfo(np.float32).eps)
     scores_minimization = 1 - scores_scaled
-    # scores_minimization = np.sort(scores_minimization)[::-1]
     population_and_scores = pd.DataFrame(population)
     scores_series = pd.Series(scores_minimization, name="scores")
     population_and_scores = pd.concat([population_and_scores, scores_series], axis=1)

@@ -1,6 +1,6 @@
 def mutate(population, mutation_probability, mutation_strength, rng):
     """
-    Add normal noise to mutation. Cut to clip to -100, 100. This is our search range.
+    Add normal noise to mutation. Clip values to -100, 100. This is our search range.
     Args:
         population:
         mutation_probability:

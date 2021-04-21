@@ -20,22 +20,24 @@ logger = logging.getLogger("PrematureConvergenceDetection")
 
 def evolutionary_algorithm(population, n_iterations, mutation_probability, crossover_probability, cost_function,
                            mutation_strength, reproduction_fnc=reproductions.rank_selection,
-                           succession_fnc=successions.elite, n_elite=None):
+                           succession_fnc=successions.elite, stop_method="naive_stop", n_elite=None):
     """
     Evolutionary algorithm based on holland algorithm.
 
     Args:
-        population:
-        n_iterations:
-        mutation_probability:
-        crossover_probability:
-        cost_function:
-        mutation_strength:
+        population (numpy.ndarray): population len x 10
+        n_iterations: number of iterations to run
+        cost_function: pointer to cost function
+        crossover_probability: [0-1]
+        mutation_probability: [0-1]
+        mutation_strength: > 0
         reproduction_fnc: pointer to reproduction (selection) function
         succession_fnc: pointer to succession function
-        n_elite:
+        stop_method: string indication function to choose to stop algorithm when futility detected
+        n_elite: for int size, for float percent of population chosen for elite
 
     Returns:
+        data_collector, stopped_in_iteration (int)
 
     """
     logger.info("Generic algorithm started")
@@ -58,12 +60,15 @@ def evolutionary_algorithm(population, n_iterations, mutation_probability, cross
     stopped_in_iteration = -1
     stuck = False
     for iteration in range(1, n_iterations + 1):
-        # if not stuck and premature_convergence_algorithms.naive_stop(data_collector, iteration-1):
-        #     stopped_in_iteration = iteration - 1
-        #     stuck = True
-        if not stuck and premature_convergence_algorithms.individual_outside_std(population, data_collector, 1, iteration-1):
-            stopped_in_iteration = iteration - 1
-            stuck = True
+        if stop_method == "naive_stop":
+            if not stuck and premature_convergence_algorithms.naive_stop(data_collector, iteration - 1):
+                stopped_in_iteration = iteration - 1
+                stuck = True
+        else:
+            if not stuck and premature_convergence_algorithms.stds_below_threshold(population, data_collector, 1,
+                                                                                   iteration - 1):
+                stopped_in_iteration = iteration - 1
+                stuck = True
 
         children = reproduction_fnc(population, scores)
         # genetic operations
@@ -72,8 +77,6 @@ def evolutionary_algorithm(population, n_iterations, mutation_probability, cross
         scores_mutants = evaluate(mutants_and_crossovered, cost_function)
         iteration_best_value, best_individual_in_iteration_idx = find_best_score(scores_mutants)
         feature_best_iteration = mutants_and_crossovered[best_individual_in_iteration_idx]
-        # logger.info(
-        #     f"{'Best in iteration.':20} score: {iteration_best_value:5.02e}") # features: {feature_best_iteration};
 
         # choose best individual
         if best_individual_value > iteration_best_value:
@@ -85,7 +88,7 @@ def evolutionary_algorithm(population, n_iterations, mutation_probability, cross
             population, scores = succession_fnc(population, mutants_and_crossovered, scores, scores_mutants)
         data_collector.add_metrics(iteration, population, scores, best_individual_features, best_individual_value)
         logger.info(
-         f"{'Best overall.':20} score: {best_individual_value:5.02e}")  # features: {best_individual_features};
+            f"{'Best overall.':20} score: {best_individual_value:5.02e}")  # features: {best_individual_features};
         logger.info(f"Iteration {iteration:3d}/{n_iterations} completed.")
     logger.info("Generic algorithm stopped")
     return data_collector, stopped_in_iteration
@@ -153,6 +156,7 @@ def prepare_logging():
 
 
 def plot_results(bests, std_x0, mean_x0):
+    """Simple plotter. Best scores on std_x0"""
     plt.plot(list(range(1, len(bests) + 1)), bests)
     plt.title("best scores")
     plt.savefig("./plot_best_score.jpg")
@@ -167,6 +171,7 @@ def plot_results(bests, std_x0, mean_x0):
 
 
 def check_on_one_fnc(cost_function, name):
+    """Run tests using single function from cec. Generate data in data collector."""
     logger.info(f"start: {name}")
     n_features = 10
     population_size = 1000
@@ -176,15 +181,16 @@ def check_on_one_fnc(cost_function, name):
     mutation_strength = 10
     population = initialize_population(n_features, population_size)
     data_collector, stopped_in_iteration = evolutionary_algorithm(population, n_iterations, mutation_probability,
-                                            crossover_probability, cost_function,
-                                            mutation_strength)
-    data_collector.save_data(pathlib.Path.cwd()/"data"/"all_fnc"/f"{name}.csv")
+                                                                  crossover_probability, cost_function,
+                                                                  mutation_strength)
+    data_collector.save_data(pathlib.Path.cwd() / "data" / "all_fnc" / f"{name}.csv")
     results = data_collector.results
     my_plotter = plotter.Plotter(results, stopped_in_iteration, name)
     my_plotter.plot_std_on_best_x()
     my_plotter.plot_mean_on_best_x()
     my_plotter.plot_best_individual_value_vs_std_x()
     my_plotter.plot_best_individual_value_vs_mean_x()
+
 
 def prepare_gid_search():
     """Return search params"""
@@ -201,8 +207,6 @@ def prepare_gid_search():
 
 def run_grid_search(search_params):
     n_iterations = 200
-    successions_fnc = successions.elite
-    reproduction_fnc = reproductions.roulette_wheel
     for index, row in search_params.iterrows():
         population = initialize_population(10, int(row["population_size"]))
         evolutionary_algorithm(population, n_iterations, row["mutation_probability"], row["crossover_probability"],
@@ -215,7 +219,6 @@ if __name__ == '__main__':
     # run_grid_search(search_params)
     fnc_names = ['f1', 'f3', 'f4', 'f5', 'f6', 'f7', 'f8', 'f9', 'f10', 'f11', 'f12', 'f13', 'f14', 'f15', 'f16',
                  'f17', 'f18', 'f19', 'f20', 'f21', 'f22', 'f23', 'f24', 'f25', 'f26', 'f27', 'f28', 'f29', 'f30']
-    for run in range(1, 31):
+    for run in range(1, 26):
         for fnc_name, fnc in zip(fnc_names, functions.all_functions):
             check_on_one_fnc(fnc, f"{fnc_name}_run{run:02d}")
-

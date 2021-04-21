@@ -10,8 +10,7 @@ def naive_stop(data_collector, iteration):
     Naive looking 25 iterations back
 
     Args:
-        population:
-        scores:
+        data_collector: instance of DataCollector to get collected data from.
         iteration: number of previous iteration
     """
     back_by = 25
@@ -36,8 +35,7 @@ def naive_stop_cmp(data_collector, variants, iteration):
                 continue
             if iteration > look_back_by and data_collector.best_scores[iteration - look_back_by] / \
                     data_collector.best_scores[iteration] < ratio:
-                variants.loc[look_back_by, ratio] = iteration
-                logger.info(f"alogrithm stuck based on criteria ratio: {ratio} and look_back_by{look_back_by}")
+                logger.info(f"algorithm stuck based on criteria ratio: {ratio} and look_back_by{look_back_by}")
                 variants.loc[look_back_by, ratio] = iteration
 
 
@@ -71,14 +69,29 @@ def stds_below_threshold(population, data_collector, threshold, iteration):
 
     Args:
         iteration(int): current iteration
-        threshold(float): value to compare stds
+        threshold(float): value to compare stds with
 
     """
-
     current_population_stds = data_collector.stds[iteration]
-    if (current_population_stds<threshold).all():
+    if (current_population_stds < threshold).all():
         # alg stuck
         logger.info("algorithm stuck in local optimum")
         return True
     else:
         return False
+
+
+def stds_cmp(data_collector, variants, iteration):
+    """
+    Take many variants into account.
+
+    Args:
+        data_collector:
+        variants: possibilities to check different thresholds
+    """
+    for th in variants.index.values:
+        if variants.loc[th] != 0:
+            continue
+        if (data_collector.stds[iteration] < th).all():
+            logger.info(f"algorithm stuck based on criteria threshold: {th}")
+            variants.loc[th] = iteration

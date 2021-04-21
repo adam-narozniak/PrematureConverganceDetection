@@ -4,6 +4,7 @@ import pathlib
 
 
 class DataCollector:
+    """Collect data for analysis."""
     def __init__(self, n_features, n_iterations):
         self.stds = np.empty([n_iterations+1, n_features])
         self.means = np.empty([n_iterations+1, n_features])
@@ -12,15 +13,18 @@ class DataCollector:
         self.results = None
 
     def add_metrics(self, iteration, population, population_scores, best_individual_features, best_individual_score):
+        """Add metrics from single iteration."""
         self.stds[iteration] = population.std(axis=0)
         self.means[iteration] = population.mean(axis=0)
         self.best_scores[iteration] = best_individual_score
         self.best_features[iteration] = best_individual_features
 
     def create_dirs(self, file_path):
+        """Create directory where data will be stored in csv format."""
         pathlib.Path(file_path.parents[0]).mkdir(parents=True, exist_ok=True)
 
     def save_data(self, file_path):
+        """Save data to csv."""
         self.create_dirs(file_path)
         results = pd.DataFrame(np.concatenate([self.stds, self.means, self.best_features, self.best_scores], axis=1),
                                columns=

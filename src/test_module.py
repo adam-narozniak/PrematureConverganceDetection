@@ -64,16 +64,16 @@ def evolutionary_algorithm(population, n_iterations, mutation_probability, cross
     stuck_naive = False
     stuck_std_1 = False
     for iteration in range(1, n_iterations + 1):
-        if not stuck_naive and premature_convergence_algorithms.naive_stop(data_collector, iteration - 1, 10, 1.001):
+        if not stuck_naive and premature_convergence_algorithms.naive_stop(data_collector, iteration - 1):
             stopped_in_iteration_naive = iteration - 1
             score_when_stopped_naive = best_individual_value
             stuck_naive = True
-        if not stuck_std and premature_convergence_algorithms.naive_stop(data_collector, iteration - 1, 25, 1.001):
+        if not stuck_std and premature_convergence_algorithms.stds_below_threshold(population, data_collector, 2, iteration):
             stopped_in_iteration_std = iteration - 1
             score_when_stopped_std = best_individual_value
             stuck_std = True
 
-        if not stuck_std_1 and premature_convergence_algorithms.naive_stop(data_collector, iteration - 1, 50, 1.001):
+        if not stuck_std_1 and premature_convergence_algorithms.naive_stop(data_collector, iteration - 1):
             stopped_in_iteration_std_1 = iteration - 1
             score_when_stopped_std_1 = best_individual_value
             stuck_std_1 = True

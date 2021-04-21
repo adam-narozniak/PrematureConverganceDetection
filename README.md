@@ -1,1 +1,1 @@
-# PrematureConverganceDetection
+# PrematureConvergenceDetection

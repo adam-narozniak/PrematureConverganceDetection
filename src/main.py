@@ -58,12 +58,12 @@ def evolutionary_algorithm(population, n_iterations, mutation_probability, cross
     stopped_in_iteration = -1
     stuck = False
     for iteration in range(1, n_iterations + 1):
-        if not stuck and premature_convergence_algorithms.naive_stop(data_collector, iteration-1):
-            stopped_in_iteration = iteration - 1
-            stuck = True
-        # if not stuck and premature_convergence_algorithms.individual_outside_std(population, data_collector, 1, iteration-1):
+        # if not stuck and premature_convergence_algorithms.naive_stop(data_collector, iteration-1):
         #     stopped_in_iteration = iteration - 1
         #     stuck = True
+        if not stuck and premature_convergence_algorithms.individual_outside_std(population, data_collector, 1, iteration-1):
+            stopped_in_iteration = iteration - 1
+            stuck = True
 
         children = reproduction_fnc(population, scores)
         # genetic operations

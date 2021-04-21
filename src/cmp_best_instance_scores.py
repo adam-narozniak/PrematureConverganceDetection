@@ -21,23 +21,7 @@ logger = logging.getLogger("PrematureConvergenceDetection")
 def evolutionary_algorithm(population, n_iterations, mutation_probability, crossover_probability, cost_function,
                            mutation_strength, reproduction_fnc=reproductions.rank_selection,
                            succession_fnc=successions.elite, n_elite=None):
-    """
-    Evolutionary algorithm based on holland algorithm.
-
-    Args:
-        population:
-        n_iterations:
-        mutation_probability:
-        crossover_probability:
-        cost_function:
-        mutation_strength:
-        reproduction_fnc: pointer to reproduction (selection) function
-        succession_fnc: pointer to succession function
-        n_elite:
-
-    Returns:
-
-    """
+    """Analogical verion like in main but for the purpose of comparison best scores."""
     logger.info("Generic algorithm started")
     if population.ndim != 2:
         raise Exception(f"Wrong format of population")
@@ -57,19 +41,14 @@ def evolutionary_algorithm(population, n_iterations, mutation_probability, cross
     data_collector.add_metrics(0, population, scores, best_individual_features, best_individual_value)
 
     # cmp variants of looking back step and percent to compare
-    look_back_by = [5, 10, 25]
+    look_back_by = [10, 25, 50]
     count_as_stuck_if_ratio_is_less_than = [1.025, 1.05, 1.1]
     variants = pd.DataFrame(np.zeros((len(look_back_by), len(count_as_stuck_if_ratio_is_less_than))),
                             columns=count_as_stuck_if_ratio_is_less_than, index=look_back_by)
 
     for iteration in range(1, n_iterations + 1):
-        if iteration == 34:
-           print("das")
-        if (variants==0).any().any():
-            premature_convergence_algorithms.naive_stop_cmp(data_collector, variants, iteration-1)
-        # if not stuck and premature_convergence_algorithms.individual_outside_std(population, data_collector, 1, iteration-1):
-        #     stopped_in_iteration = iteration - 1
-        #     stuck = True
+        if (variants == 0).any().any():
+            premature_convergence_algorithms.naive_stop_cmp(data_collector, variants, iteration - 1)
 
         children = reproduction_fnc(population, scores)
         # genetic operations
@@ -78,9 +57,60 @@ def evolutionary_algorithm(population, n_iterations, mutation_probability, cross
         scores_mutants = evaluate(mutants_and_crossovered, cost_function)
         iteration_best_value, best_individual_in_iteration_idx = find_best_score(scores_mutants)
         feature_best_iteration = mutants_and_crossovered[best_individual_in_iteration_idx]
-        # logger.info(
-        #     f"{'Best in iteration.':20} score: {iteration_best_value:5.02e}") # features: {feature_best_iteration};
+        # choose best individual
+        if best_individual_value > iteration_best_value:
+            best_individual_value = iteration_best_value
+            best_individual_features = feature_best_iteration
+        if succession_fnc == successions.elite:
+            population, scores = succession_fnc(population, mutants_and_crossovered, scores, scores_mutants, 0.1)
+        else:  # succession.generative
+            population, scores = succession_fnc(population, mutants_and_crossovered, scores, scores_mutants)
+        data_collector.add_metrics(iteration, population, scores, best_individual_features, best_individual_value)
+        logger.info(
+            f"{'Best overall.':20} score: {best_individual_value:5.02e}")  # features: {best_individual_features};
+        logger.info(f"Iteration {iteration:3d}/{n_iterations} completed.")
+    logger.info("Generic algorithm stopped")
+    return data_collector, variants
 
+
+def evolutionary_algorithm_for_stds(population, n_iterations, mutation_probability, crossover_probability,
+                                    cost_function,
+                                    mutation_strength, reproduction_fnc=reproductions.rank_selection,
+                                    succession_fnc=successions.elite, n_elite=None):
+    """Analogical version as in main but with purpose of comparison of stds"""
+    logger.info("Generic algorithm started")
+    if population.ndim != 2:
+        raise Exception(f"Wrong format of population")
+
+    population_size = population.shape[0]
+    n_features = population.shape[1]
+
+    if population_size < 1:
+        raise Exception(f"Population should be positive number, not {population_size}")
+    if n_features < 1:
+        raise Exception(f"Number of features should be positive number, not {population_size}")
+
+    scores = evaluate(population, cost_function)
+    best_individual_value, best_individual_idx = find_best_score(scores)
+    best_individual_features = population[best_individual_idx]
+    data_collector = DataCollector(n_features, n_iterations)
+    data_collector.add_metrics(0, population, scores, best_individual_features, best_individual_value)
+
+    # cmp variants of looking back step and percent to compare
+    thresholds = [2, 0.1, 0.001]
+    variants = pd.Series(np.zeros((len(thresholds))), index=thresholds)
+
+    for iteration in range(1, n_iterations + 1):
+        if (variants == 0).any():
+            premature_convergence_algorithms.stds_cmp(data_collector, variants, iteration - 1)
+
+        children = reproduction_fnc(population, scores)
+        # genetic operations
+        mutants_and_crossovered = mutate_and_crossover(children, mutation_probability, crossover_probability,
+                                                       mutation_strength, crossover=True)
+        scores_mutants = evaluate(mutants_and_crossovered, cost_function)
+        iteration_best_value, best_individual_in_iteration_idx = find_best_score(scores_mutants)
+        feature_best_iteration = mutants_and_crossovered[best_individual_in_iteration_idx]
         # choose best individual
         if best_individual_value > iteration_best_value:
             best_individual_value = iteration_best_value
@@ -181,37 +211,32 @@ def check_on_one_fnc(cost_function, name):
     crossover_probability = 0.6
     mutation_strength = 10
     population = initialize_population(n_features, population_size)
-    data_collector,  variants = evolutionary_algorithm(population, n_iterations, mutation_probability,
-                                                                  crossover_probability, cost_function,
-                                                                  mutation_strength)
+    data_collector, variants = evolutionary_algorithm(population, n_iterations, mutation_probability,
+                                                      crossover_probability, cost_function,
+                                                      mutation_strength)
     data_collector.save_data(pathlib.Path.cwd() / "data" / "all_fnc" / f"{name}.csv")
     results = data_collector.results
     my_plotter = plotter.Plotter(results, variants, name)
     variants.to_csv(pathlib.Path.cwd() / "data" / "all_fnc" / f"stop_in_{name}.csv")
     my_plotter.plot_cmp_bests_variants()
 
-
-def prepare_gid_search():
-    """Return search params"""
-    population_size = [100, 300, 1000, 3000]
-    mutation_probability = [0.1, 0.2, 0.3]
-    mutation_strength = [1, 3, 10, 30]
-    crossover_probability = [0.2, 0.5, 0.7]
-    search_params = np.array(
-        np.meshgrid(population_size, mutation_probability, mutation_strength, crossover_probability)).T.reshape(-1, 4)
-    search_params = pd.DataFrame(search_params, columns=["population_size", "mutation_probability", "mutation_strength",
-                                                         "crossover_probability"])
-    return search_params
-
-
-def run_grid_search(search_params):
+def check_on_one_fnc_for_stds(cost_function, name):
+    logger.info(f"start: {name}")
+    n_features = 10
+    population_size = 500
     n_iterations = 200
-    successions_fnc = successions.elite
-    reproduction_fnc = reproductions.roulette_wheel
-    for index, row in search_params.iterrows():
-        population = initialize_population(10, int(row["population_size"]))
-        evolutionary_algorithm(population, n_iterations, row["mutation_probability"], row["crossover_probability"],
-                               simple.f1, row["mutation_strength"])
+    mutation_probability = 0.2
+    crossover_probability = 0.6
+    mutation_strength = 10
+    population = initialize_population(n_features, population_size)
+    data_collector, variants = evolutionary_algorithm_for_stds(population, n_iterations, mutation_probability,
+                                                      crossover_probability, cost_function,
+                                                      mutation_strength)
+    data_collector.save_data(pathlib.Path.cwd() / "data" / "all_fnc" / f"{name}.csv")
+    results = data_collector.results
+    my_plotter = plotter.Plotter(results, variants, name)
+    variants.to_csv(pathlib.Path.cwd() / "data" / "all_fnc" / f"stop_in_{name}.csv")
+    my_plotter.plot_cmp_stds_variants()
 
 
 if __name__ == '__main__':
@@ -222,4 +247,4 @@ if __name__ == '__main__':
     every_other_fnc = functions.all_functions[::2]
     for run in range(1, 25):
         for fnc_name, fnc in zip(every_other_fnc_name, every_other_fnc):
-            check_on_one_fnc(fnc, f"{fnc_name}_run{run:02d}")
+            check_on_one_fnc_for_stds(fnc, f"{fnc_name}_run{run:02d}")
